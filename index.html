@@ -17,6 +17,122 @@
     db: { schema: 'lizadeel' }
   });
 </script>
+<script>
+  // 1. Initialisation Supabase
+  const SUPABASE_URL = 'https://nmjrhcglphajaxsmxhkm.supabase.co';
+  const SUPABASE_ANON_KEY = 'VOTRE_CLE_ANON_ICI'; // Remplacez par votre clé anon
+
+  const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    db: { schema: 'lizadeel' }
+  });
+
+  // 2. Charger l'Équipe & Fonctions
+  async function loadEquipe() {
+    const tbody = document.getElementById('tbody-equipe');
+    if (!tbody) return;
+
+    const { data, error } = await client
+      .from('t_agent') // Remplacez par le nom exact de votre table si différent (ex: v_agents)
+      .select('*');
+
+    if (error) {
+      console.error('Erreur Équipe:', error);
+      return;
+    }
+
+    tbody.innerHTML = data.map(agent => `
+      <tr class="border-b hover:bg-slate-50">
+        <td class="p-4 font-bold text-slate-800">${agent.nom_complet || agent.nom || 'N/A'}</td>
+        <td class="p-4 text-slate-600">${agent.fonction || 'Non défini'}</td>
+        <td class="p-4 text-slate-600">${agent.telephone || agent.email || '-'}</td>
+        <td class="p-4 text-slate-600">${agent.date_debut || '-'}</td>
+        <td class="p-4">
+          <span class="px-2 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+            ${agent.statut || 'En fonction'}
+          </span>
+        </td>
+        <td class="p-4 space-x-2">
+          <button onclick="deleteAgent('${agent.id}')" class="text-xs text-red-600 hover:underline">Supprimer</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  // 3. Charger les Projets et Programmes
+  async function loadProjets() {
+    const tbody = document.getElementById('tbody-projets');
+    if (!tbody) return;
+
+    const { data, error } = await client
+      .from('t_projet') // Nom de votre table projet
+      .select('*');
+
+    if (error) {
+      console.error('Erreur Projets:', error);
+      return;
+    }
+
+    tbody.innerHTML = data.map(projet => `
+      <tr class="border-b hover:bg-slate-50">
+        <td class="p-4 font-bold text-slate-800">${projet.nom_projet || projet.titre}</td>
+        <td class="p-4 text-slate-600">${projet.partenaire || 'Bailleur N/A'}</td>
+        <td class="p-4 text-slate-600">${projet.zone_couverture || 'National'}</td>
+        <td class="p-4">
+          <span class="px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+            ${projet.statut || 'En cours'}
+          </span>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  // 4. Charger les Départements et Services
+  async function loadDepartements() {
+    const tbody = document.getElementById('tbody-departements');
+    if (!tbody) return;
+
+    const { data, error } = await client
+      .from('t_departement') // Nom de votre table département
+      .select('*');
+
+    if (error) {
+      console.error('Erreur Départements:', error);
+      return;
+    }
+
+    tbody.innerHTML = data.map(dept => `
+      <tr class="border-b hover:bg-slate-50">
+        <td class="p-4 font-bold text-slate-800">${dept.code || '-'}</td>
+        <td class="p-4 font-semibold text-slate-800">${dept.nom_departement || dept.libelle}</td>
+        <td class="p-4 text-slate-600">${dept.responsable || 'Non assigné'}</td>
+      </tr>
+    `).join('');
+  }
+
+  // 5. Action d'Exemple : Supprimer un agent en direct
+  async function deleteAgent(id) {
+    if (!confirm('Voulez-vous vraiment supprimer cet agent de la base PostgreSQL ?')) return;
+
+    const { error } = await client
+      .from('t_agent')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      alert('Erreur : ' + error.message);
+    } else {
+      alert('Agent supprimé avec succès !');
+      loadEquipe(); // Recharger le tableau
+    }
+  }
+
+  // Execution automatique au chargement de la page
+  window.addEventListener('DOMContentLoaded', () => {
+    loadEquipe();
+    loadProjets();
+    loadDepartements();
+  });
+</script>
 <body>
   <div class="app">
     <aside class="side"><div class="brand"><div class="mark">LZ</div><h1>LIZADEEL</h1><p>Ligue de la Zone Afrique pour la Défense des Droits des Enfants et Élèves</p></div><div class="rule"></div><nav><button data-page="home">▦ &nbsp;Tableau de bord</button><button data-page="programs">▤ &nbsp;Projets et programmes</button><button data-page="offices">⌖ &nbsp;Bureaux et provinces</button><button data-page="departments">▤ &nbsp;Départements et services</button><button class="active" data-page="team">♙ &nbsp;Équipe et fonctions</button><button data-page="cases">▣ &nbsp;Dossiers protégés</button></nav><p class="foot">● Démonstration locale<br>Blanc & bleu · Hors ligne</p></aside>
