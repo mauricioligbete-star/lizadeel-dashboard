@@ -1,88 +1,50 @@
 <script>
-  // Configuration Supabase
+  // Initialisation sécurisée
   const SUPABASE_URL = 'https://nmjrhcglphajaxsmxhkm.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tanJoY2dscGhhamF4c214aGttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcwMDAwMzEsImV4cCI6MjEwMjU3NjAzMX0._Xsri3_jUJcH8XfRGEr256VtnNz3ay-_RnW2_vljqh4'; // Remplacez par votre vraie clé anon
-  
-  const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    db: { schema: 'lizadeel' }
-  });
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tanJoY2dscGhhamF4c214aGttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcwMDAwMzEsImV4cCI6MjEwMjU3NjAzMX0._Xsri3_jUJcH8XfRGEr256VtnNz3ay-_RnW2_vljqh4'; // Remplacez par votre clé réelle
 
-  // 1. Charger les Données du Tableau de Bord (Cas par province)
+  let client = null;
+
+  try {
+    if (typeof supabase !== 'undefined') {
+      client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        db: { schema: 'lizadeel' }
+      });
+    }
+  } catch (err) {
+    console.error("Erreur initialisation Supabase:", err);
+  }
+
+  // Fonction de chargement sécurisée
   async function loadDashboard() {
     const tbody = document.getElementById('data-table');
-    if (!tbody) return;
+    if (!tbody || !client) return;
 
-    const { data, error } = await client
-      .from('v_dashboard_cases_by_province')
-      .select('*');
+    try {
+      const { data, error } = await client
+        .from('v_dashboard_cases_by_province')
+        .select('*');
 
-    if (error) {
-      tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-red-500">Erreur : ${error.message}</td></tr>`;
-      return;
+      if (error) throw error;
+
+      tbody.innerHTML = data.map(row => `
+        <tr class="hover:bg-slate-50">
+          <td class="p-4 font-mono text-xs font-semibold text-slate-500">${row.province_code || '-'}</td>
+          <td class="p-4 font-semibold text-slate-800">${row.province_name}</td>
+          <td class="p-4"><span class="bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-full text-xs">${row.total_cases}</span></td>
+          <td class="p-4 text-slate-600">${row.open_cases || 0}</td>
+          <td class="p-4"><span class="bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full text-xs">${row.in_progress_cases || 0}</span></td>
+          <td class="p-4 text-slate-600">${row.court_cases || 0}</td>
+        </tr>
+      `).join('');
+    } catch (err) {
+      console.error("Erreur chargement données:", err);
+      tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">Impossible de charger les données : ${err.message}</td></tr>`;
     }
-
-    tbody.innerHTML = data.map(row => `
-      <tr class="hover:bg-slate-50">
-        <td class="p-4 font-mono text-xs font-semibold text-slate-500">${row.province_code || '-'}</td>
-        <td class="p-4 font-semibold text-slate-800">${row.province_name}</td>
-        <td class="p-4"><span class="bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-full text-xs">${row.total_cases}</span></td>
-        <td class="p-4 text-slate-600">${row.open_cases || 0}</td>
-        <td class="p-4"><span class="bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full text-xs">${row.in_progress_cases || 0}</span></td>
-        <td class="p-4 text-slate-600">${row.court_cases || 0}</td>
-      </tr>
-    `).join('');
   }
 
-  // 2. Charger les Bénéficiaires
-  async function loadBeneficiaries() {
-    const tbody = document.getElementById('tbody-beneficiaries');
-    if (!tbody) return;
-
-    const { data, error } = await client
-      .from('beneficiaries')
-      .select('*');
-
-    if (error) {
-      console.error('Erreur Bénéficiaires:', error);
-      return;
-    }
-
-    tbody.innerHTML = data.map(b => `
-      <tr class="hover:bg-slate-50">
-        <td class="p-4 font-mono text-xs font-bold text-slate-700">${b.beneficiary_code}</td>
-        <td class="p-4 text-slate-600">${b.gender || '-'}</td>
-        <td class="p-4 text-slate-600">${b.age_group || '-'}</td>
-      </tr>
-    `).join('');
-  }
-
-  // 3. Charger les Cas d'agression/suivi
-  async function loadCases() {
-    const tbody = document.getElementById('tbody-cases');
-    if (!tbody) return;
-
-    const { data, error } = await client
-      .from('cases')
-      .select('*');
-
-    if (error) {
-      console.error('Erreur Cases:', error);
-      return;
-    }
-
-    tbody.innerHTML = data.map(c => `
-      <tr class="hover:bg-slate-50">
-        <td class="p-4 font-mono text-xs font-bold text-slate-700">${c.case_code || c.id}</td>
-        <td class="p-4 text-slate-600">${c.incident_date || '-'}</td>
-        <td class="p-4 text-slate-600">${c.status || 'En cours'}</td>
-      </tr>
-    `).join('');
-  }
-
-  // Lancement automatique au chargement de la page
-  window.addEventListener('DOMContentLoaded', () => {
+  // Chargement après la fin du rendu du DOM
+  document.addEventListener('DOMContentLoaded', () => {
     loadDashboard();
-    loadBeneficiaries();
-    loadCases();
   });
 </script>
